@@ -48,6 +48,7 @@ Supporting data helpers include:
 
 - `prepare_mortselect_data()`
 - `validate_demogdata_list()`
+- `validate_prepared_mortselect_data()`
 - `create_population_age_dictionary()`
 - `bind_training_rates()`
 
@@ -59,63 +60,79 @@ library(mortselect)
 prepared <- prepare_mortselect_data(
   dataset,
   ages = 0:100,
+  series = c("female", "male", "total"),
   learning_years = 1980:2004,
   validation_years = 2005:2012,
   test_years = 2013:2020,
   exclude_labels = c("Example population to omit")
 )
+
+prepared_dsa <- prepare_mortselect_data(
+  dataset,
+  ages = 0:100,
+  learning_years = 1980:2004,
+  validation_years = 2005:2012,
+  test_years = 2013:2020,
+  exclude_labels = c("Example population to omit"),
+  relabel_sex = TRUE
+)
+
+prepared_cbd <- prepare_mortselect_data(
+  dataset,
+  ages = 55:90,
+  series = "female",
+  learning_years = 1980:2004,
+  validation_years = 2005:2012,
+  test_years = 2013:2020,
+  combine.upper = TRUE
+)
 ```
 
 `prepare_mortselect_data()` validates the requested mortality series, filters
 populations with sufficient year coverage, applies optional exclusions, repairs
-zero mortality rates, and returns `learning`, `validation`, `test`, `training`,
-and `full` datasets.
+zero or missing mortality rates, and returns `learning`, `validation`, `test`,
+`training`, and `full` datasets.
+
+If a population has an age row with no positive finite mortality rates available
+for interpolation, that population is skipped consistently across all prepared
+splits and reported in `prepared$metadata$skipped`.
+
+The forecasting functions expect this prepared object and check its format
+before model fitting. They do not call `prepare_mortselect_data()` internally.
 
 ## Forecasting Examples
 
 ```r
 dsa_forecast <- forecast_dsa(
-  dataset,
+  prepared_dsa,
   COG = 10,
   N = 3,
   LOSS = "SSE",
-  t = 10,
-  learning_years = 1980:2004,
-  validation_years = 2005:2012,
-  test_years = 2013:2020
+  t = 10
 )
 
 single_ass <- forecast_ass_single(
-  dataset,
+  prepared,
   Series = "female",
-  t = 10,
-  ages = 0:100,
-  learning_years = 1980:2004,
-  validation_years = 2005:2012,
-  test_years = 2013:2020
+  t = 10
 )
 
 multi_ass <- forecast_ass_multi(
-  dataset,
+  prepared,
   Series = "male",
-  t = 10,
-  ages = 0:100,
-  learning_years = 1980:2004,
-  validation_years = 2005:2012,
-  test_years = 2013:2020
+  t = 10
 )
 
 acf_ensemble <- forecast_bmbe_acf(
-  dataset,
+  prepared,
   Series = "female",
   t = 10
 )
 
 cbd_ensemble <- forecast_bmbe_cbd(
-  dataset,
+  prepared_cbd,
   Series = "female",
-  t = 10,
-  ages = 55:90
+  t = 10
 )
 ```
 
@@ -160,5 +177,3 @@ Method mapping:
 - `forecast_ass_single()` and `forecast_ass_multi()` follow the age-specific
   band selection paper.
 - `forecast_bmbe_acf()` and `forecast_bmbe_cbd()` follow the BMBE paper.
-
-

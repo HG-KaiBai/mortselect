@@ -3,63 +3,39 @@
 #'
 #' Implements the DSA population-selection workflow of Diao, Meng, and Weng
 #' (2020) with the augmented common factor fitting routine used in the
-#' accompanying research code. The default age and year ranges reproduce the
-#' empirical study setup, but they can be changed for another mortality data
-#' collection.
+#' accompanying research code. Call [prepare_mortselect_data()] first to set
+#' age ranges, year windows, exclusions, and missing-rate handling.
 #'
-#' @param Dataset_raw A list of `demography::demogdata` mortality objects.
+#' @param prepared A prepared mortality dataset returned by
+#'   [prepare_mortselect_data()]. For DSA, prepare with `relabel_sex = TRUE`.
 #' @param COG Maximum selected group size.
 #' @param N Maximum number of country-specific components.
 #' @param LOSS Selection loss. One of `"SSE"`, `"MAE"`, `"MSPE"`, or `"MAPE"`.
 #' @param t Number of years to forecast.
-#' @param ages Ages to retain.
-#' @param learning_years Candidate-learning years.
-#' @param validation_years Validation years.
-#' @param test_years Held-out testing years.
-#' @param training_years Final training years. Defaults to learning plus
-#'   validation years.
-#' @param fit_years Full data years retained before splitting.
-#' @param exclude_labels Optional population labels to remove.
-#' @param exclude_indices Optional numeric population positions to remove
-#'   after filtering for required years.
 #' @param save_file Optional `.RData` path. If `NULL`, no file is written.
 #'
 #' @return A named list of forecasts. Each element contains `label` and
 #'   `Prediction`, where `Prediction` is a mortality-rate matrix.
 #' @export
 #'
-forecast_dsa = function(Dataset_raw,
+forecast_dsa = function(prepared,
                         COG = 30,
                         N = 5,
                         LOSS = "SSE",
                         t = 15,
-                        ages = 0:100,
-                        learning_years = 1970:1994,
-                        validation_years = 1995:2002,
-                        test_years = 2003:2010,
-                        training_years = NULL,
-                        fit_years = NULL,
-                        exclude_labels = NULL,
-                        exclude_indices = NULL,
                         save_file = NULL)
 {
-  prep <- prepare_mortselect_data(
-    Dataset_raw,
-    ages = ages,
-    learning_years = learning_years,
-    validation_years = validation_years,
-    test_years = test_years,
-    training_years = training_years,
-    fit_years = fit_years,
-    exclude_labels = exclude_labels,
-    exclude_indices = exclude_indices,
-    relabel_sex = TRUE
+  validate_prepared_mortselect_data(
+    prepared,
+    series = NULL,
+    min_populations = 2,
+    require_relabel_sex = TRUE
   )
 
-  Training_relabel = prep$full
-  Candidate_relabel = prep$learning
-  Dataset_Validate_relabel = prep$validation
-  Dataset_Test_relabel = prep$test
+  Training_relabel = prepared$full
+  Candidate_relabel = prepared$learning
+  Dataset_Validate_relabel = prepared$validation
+  Dataset_Test_relabel = prepared$test
   if (length(Candidate_relabel) < 2) {
     stop("At least two sex-specific populations are required for DSA selection.", call. = FALSE)
   }
@@ -87,7 +63,7 @@ forecast_dsa = function(Dataset_raw,
     last_year <- max(Training_relabel[[country]]$year)
     colnames(Predict) = c((last_year + 1):(last_year + t))
     Rate_predict = exp(Predict)
-    Ans[[country]] = list(label = country, Prediction = Rate_predict)
+    Ans[[country]] = list(label = country, Group = Best_group, Prediction = Rate_predict)
     #Ans[[country]] = list(label = country, Error = Err, Prediction = Rate_predict)
   }
   if (!is.null(save_file)) {
@@ -103,45 +79,24 @@ forecast_dsa = function(Dataset_raw,
 #' Applies the CBD-type bivariate model-based ensemble described in the BMBE
 #' paper. The default age range, 55--90, follows the senior-age CBD study.
 #'
-#' @param Dataset_raw A list of `demography::demogdata` mortality objects.
+#' @param prepared A prepared mortality dataset returned by
+#'   [prepare_mortselect_data()].
 #' @param Series Mortality series to forecast.
 #' @param t Number of years to forecast.
-#' @param ages Ages to retain.
 #' @inheritParams forecast_dsa
 #' @return A named list of CBD ensemble forecast objects.
 #' @export
 #'
-forecast_bmbe_cbd = function(Dataset_raw,
+forecast_bmbe_cbd = function(prepared,
                              Series = "female",
                              t = 15,
-                             ages = 55:90,
-                             learning_years = 1970:1994,
-                             validation_years = 1995:2002,
-                             test_years = 2003:2010,
-                             training_years = NULL,
-                             fit_years = NULL,
-                             exclude_labels = NULL,
-                             exclude_indices = NULL,
                              save_file = NULL){
-  prep <- prepare_mortselect_data(
-    Dataset_raw,
-    ages = ages,
-    learning_years = learning_years,
-    validation_years = validation_years,
-    test_years = test_years,
-    training_years = training_years,
-    fit_years = fit_years,
-    series = Series,
-    exclude_labels = exclude_labels,
-    exclude_indices = exclude_indices,
-    relabel_sex = FALSE,
-    combine.upper = TRUE
-  )
-
-  Training = prep$full
-  Candidate = prep$learning
-  Dataset_Validate = prep$validation
-  Dataset_Test = prep$test
+  validate_prepared_mortselect_data(prepared, series = Series, min_populations = 2)
+  Training = prepared$full
+  Candidate = prepared$learning
+  Dataset_Validate = prepared$validation
+  Dataset_Test = prepared$test
+  validation_h <- ncol(Dataset_Validate[[1]]$rate[[Series]])
   if (length(Candidate) < 2) {
     stop("At least two populations are required for the bivariate CBD ensemble.", call. = FALSE)
   }
@@ -161,7 +116,7 @@ forecast_bmbe_cbd = function(Dataset_raw,
       for(Deltat in -10:10){
         F=FitBivariateCBD1withDelta_modeling(Index1,Index2,Series,Deltat, Candidate)
         BivarateCBD1withDelta_modeling[[s]]=F
-        E=ExtrapolateBivarateCBD1withDelta(F, h = length(validation_years))
+        E=ExtrapolateBivarateCBD1withDelta(F, h = validation_h)
         ValidateBivarateCBD1withDelta[[s]]=E
         temp=ValidationSSE_CBD1withDelta(E,Series, Dataset_Validate)
         ValidationSSESummary=rbind(ValidationSSESummary,temp)
@@ -250,44 +205,24 @@ forecast_bmbe_cbd = function(Dataset_raw,
 #' Applies the ACF-type bivariate model-based ensemble described in the BMBE
 #' paper.
 #'
-#' @param Dataset_raw A list of `demography::demogdata` mortality objects.
+#' @param prepared A prepared mortality dataset returned by
+#'   [prepare_mortselect_data()].
 #' @param Series Mortality series to forecast.
 #' @param t Number of years to forecast.
-#' @param ages Ages to retain.
 #' @inheritParams forecast_dsa
 #' @return A named list of ACF ensemble forecast objects.
 #' @export
 #'
-forecast_bmbe_acf = function(Dataset_raw,
+forecast_bmbe_acf = function(prepared,
                              Series = 'female',
                              t = 15,
-                             ages = 0:100,
-                             learning_years = 1970:1994,
-                             validation_years = 1995:2002,
-                             test_years = 2003:2010,
-                             training_years = NULL,
-                             fit_years = NULL,
-                             exclude_labels = NULL,
-                             exclude_indices = NULL,
                              save_file = NULL){
-  prep <- prepare_mortselect_data(
-    Dataset_raw,
-    ages = ages,
-    learning_years = learning_years,
-    validation_years = validation_years,
-    test_years = test_years,
-    training_years = training_years,
-    fit_years = fit_years,
-    series = Series,
-    exclude_labels = exclude_labels,
-    exclude_indices = exclude_indices,
-    relabel_sex = FALSE
-  )
-
-  Training = prep$full
-  Candidate = prep$learning
-  Dataset_Validate = prep$validation
-  Dataset_Test = prep$test
+  validate_prepared_mortselect_data(prepared, series = Series, min_populations = 2)
+  Training = prepared$full
+  Candidate = prepared$learning
+  Dataset_Validate = prepared$validation
+  Dataset_Test = prepared$test
+  validation_h <- ncol(Dataset_Validate[[1]]$rate[[Series]])
   if (length(Candidate) < 2) {
     stop("At least two populations are required for the bivariate ACF ensemble.", call. = FALSE)
   }
@@ -300,7 +235,7 @@ forecast_bmbe_acf = function(Dataset_raw,
       message(names(Candidate)[i])
       message(names(Candidate)[j])
       temp=JointModelACF(Candidate[[i]],Candidate[[j]],Series, Candidate, Dataset_Validate,
-                         h = length(validation_years))
+                         h = validation_h)
       Result_bivariateACF=rbind(Result_bivariateACF,temp)
     }
   }
@@ -337,7 +272,7 @@ forecast_bmbe_acf = function(Dataset_raw,
     delta=Result_DeltaChoice_SumSSE_V[i,]$delta
     G=GroupdemogdataWithDrift(target,reference,target$year[1],target$year[length(target$year)],delta)
     message(G$year)
-    V=Validate_Forecast(target,G,Series, Dataset_Validate, h = length(validation_years))
+    V=Validate_Forecast(target,G,Series, Dataset_Validate, h = validation_h)
     Validate_Forecast_Result[[s]]=V
     s=s+1
   }
@@ -370,46 +305,26 @@ forecast_bmbe_acf = function(Dataset_raw,
 #' Implements the age-specific band-selection method for each population
 #' separately.
 #'
-#' @param Dataset_raw A list of `demography::demogdata` mortality objects.
+#' @param prepared A prepared mortality dataset returned by
+#'   [prepare_mortselect_data()].
 #' @param Series Mortality series to forecast.
 #' @param t Number of years to forecast.
-#' @param ages Ages to retain.
 #' @param smoothing_window Window size for smoothing selected bandwidths.
 #' @inheritParams forecast_dsa
 #' @return A named list of log-rate forecast matrices.
 #' @export
 #'
-forecast_ass_single = function(Dataset_raw,
+forecast_ass_single = function(prepared,
                                Series = 'female',
                                t = 15,
-                               ages = 0:100,
-                               learning_years = 1970:1994,
-                               validation_years = 1995:2002,
-                               test_years = 2003:2010,
-                               training_years = NULL,
-                               fit_years = NULL,
-                               exclude_labels = NULL,
-                               exclude_indices = NULL,
                                smoothing_window = 5,
                                save_file = NULL){
-  prep <- prepare_mortselect_data(
-    Dataset_raw,
-    ages = ages,
-    learning_years = learning_years,
-    validation_years = validation_years,
-    test_years = test_years,
-    training_years = training_years,
-    fit_years = fit_years,
-    series = Series,
-    exclude_labels = exclude_labels,
-    exclude_indices = exclude_indices,
-    relabel_sex = FALSE
-  )
-
-  Training = prep$full
-  Candidate = prep$learning
-  Dataset_training = prep$training
-  Dataset_Test = prep$test
+  validate_prepared_mortselect_data(prepared, series = Series, min_populations = 1)
+  Training = prepared$full
+  Candidate = prepared$learning
+  Dataset_training = prepared$training
+  Dataset_Test = prepared$test
+  ages <- prepared$metadata$ages %||% Candidate[[1]]$age
 
   ChosenK=data.frame()
   for(i in seq_along(Candidate)){
@@ -472,46 +387,26 @@ forecast_ass_single = function(Dataset_raw,
 #' Extends age-specific band selection by selecting information across both
 #' ages and populations.
 #'
-#' @param Dataset_raw A list of `demography::demogdata` mortality objects.
+#' @param prepared A prepared mortality dataset returned by
+#'   [prepare_mortselect_data()].
 #' @param Series Mortality series to forecast.
 #' @param t Number of years to forecast.
-#' @param ages Ages to retain.
 #' @param smoothing_window Window size for smoothing selected bandwidths.
 #' @inheritParams forecast_dsa
 #' @return A named list of log-rate forecast matrices.
 #' @export
 #'
-forecast_ass_multi = function(Dataset_raw,
+forecast_ass_multi = function(prepared,
                               Series = 'female',
                               t = 15,
-                              ages = 0:100,
-                              learning_years = 1970:1994,
-                              validation_years = 1995:2002,
-                              test_years = 2003:2010,
-                              training_years = NULL,
-                              fit_years = NULL,
-                              exclude_labels = NULL,
-                              exclude_indices = NULL,
                               smoothing_window = 9,
                               save_file = NULL){
-  prep <- prepare_mortselect_data(
-    Dataset_raw,
-    ages = ages,
-    learning_years = learning_years,
-    validation_years = validation_years,
-    test_years = test_years,
-    training_years = training_years,
-    fit_years = fit_years,
-    series = Series,
-    exclude_labels = exclude_labels,
-    exclude_indices = exclude_indices,
-    relabel_sex = FALSE
-  )
-
-  Training = prep$full
-  Candidate = prep$learning
-  Dataset_training = prep$training
-  Dataset_Test = prep$test
+  validate_prepared_mortselect_data(prepared, series = Series, min_populations = 1)
+  Training = prepared$full
+  Candidate = prepared$learning
+  Dataset_training = prepared$training
+  Dataset_Test = prepared$test
+  ages <- prepared$metadata$ages %||% Candidate[[1]]$age
 
   ## Population-Age dictionary ####
   Dictionary=create_population_age_dictionary(Candidate, ages = ages)

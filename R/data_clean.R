@@ -130,44 +130,113 @@ clean_v2=function(Obj)
 }
 
 
-#' Interpolate 0-mortality rate
+#' Interpolate invalid mortality rates
 #'
 #' @param Obj the data set
 #'
-#' @return 0-mortality rate fixed
-fix_mortality = function(Obj){
+#' @return Mortality data with zero, missing, and infinite rates repaired.
+#'   Populations with unrecoverable mortality rows are skipped and recorded in
+#'   the `"skipped"` attribute.
+fix_mortality = function(Obj, warn = TRUE){
+  repaired <- list()
+  skipped <- data.frame(
+    population = character(),
+    series = character(),
+    age = character(),
+    reason = character(),
+    stringsAsFactors = FALSE
+  )
   for(i in 1: (length(Obj)))
   {
     message("Current country is ",names(Obj)[i])
-    for (gender in c("female", "male", "total"))
+    skip_population <- FALSE
+    skip_record <- NULL
+    for (gender in intersect(c("female", "male", "total"), names(Obj[[i]]$rate)))
     {
       MortalityMatrix=Obj[[i]]$rate[[gender]]
-      if(sum(MortalityMatrix==0)>0)
-      {
-        Index=which(MortalityMatrix==0,arr.ind=TRUE)
-        for(count in 1:nrow(Index))
-        {
-          rowIndex=Index[count,1]
-          colIndex=Index[count,2]
-          if(colIndex==1)
-          {
-            ApproxValue=MortalityMatrix[rowIndex,colIndex+1]
-          }
-          else if (colIndex==ncol(MortalityMatrix))
-          {
-            ApproxValue=MortalityMatrix[rowIndex,colIndex-1]
-          }
-          else
-          {
-            ApproxValue=mean(c(MortalityMatrix[rowIndex,colIndex-1],MortalityMatrix[rowIndex,colIndex+1]))
-          }
-          MortalityMatrix[rowIndex,colIndex]=ApproxValue
+      repaired_matrix <- tryCatch(
+        repair_mortality_matrix(MortalityMatrix, names(Obj)[i], gender),
+        error = function(e) {
+          skip_population <<- TRUE
+          skip_record <<- data.frame(
+            population = names(Obj)[i],
+            series = gender,
+            age = {
+              age <- attr(e, "age", exact = TRUE)
+              if (is.null(age)) NA_character_ else age
+            },
+            reason = conditionMessage(e),
+            stringsAsFactors = FALSE
+          )
+          NULL
         }
+      )
+      if (skip_population) {
+        break
       }
+      MortalityMatrix=repaired_matrix
       Obj[[i]]$rate[[gender]]=MortalityMatrix
     }
+    if (skip_population) {
+      skipped <- rbind(skipped, skip_record)
+      next
+    }
+    repaired[[length(repaired) + 1]] <- Obj[[i]]
+    names(repaired)[length(repaired)] <- names(Obj)[i]
   }
-  return(Obj)
+  if (nrow(skipped) > 0 && warn) {
+    warning(
+      "Skipped ", nrow(skipped), " population(s) with unrecoverable mortality data: ",
+      paste(paste0(skipped$population, " / ", skipped$series, " / age ", skipped$age), collapse = "; "),
+      call. = FALSE
+    )
+  }
+  attr(repaired, "skipped") <- skipped
+  return(repaired)
+}
+
+repair_mortality_matrix <- function(MortalityMatrix, population, series) {
+  invalid <- !is.finite(MortalityMatrix) | MortalityMatrix <= 0
+  if (!any(invalid, na.rm = TRUE)) {
+    return(MortalityMatrix)
+  }
+
+  for (rowIndex in seq_len(nrow(MortalityMatrix))) {
+    row <- as.numeric(MortalityMatrix[rowIndex, ])
+    invalid_row <- !is.finite(row) | row <= 0
+    if (!any(invalid_row, na.rm = TRUE)) {
+      next
+    }
+
+    valid_idx <- which(!invalid_row)
+    if (length(valid_idx) == 0) {
+      age_label <- rownames(MortalityMatrix)[rowIndex]
+      if (is.null(age_label) || is.na(age_label)) {
+        age_label <- rowIndex
+      }
+      err <- simpleError(paste0(
+        "Population `", population, "`, series `", series,
+        "`, age `", age_label, "` has no positive finite mortality rates ",
+        "available for interpolation."
+      ))
+      attr(err, "age") <- as.character(age_label)
+      stop(err)
+    }
+
+    if (length(valid_idx) == 1) {
+      row[invalid_row] <- row[valid_idx]
+    } else {
+      row[invalid_row] <- stats::approx(
+        x = valid_idx,
+        y = row[valid_idx],
+        xout = which(invalid_row),
+        rule = 2
+      )$y
+    }
+    MortalityMatrix[rowIndex, ] <- row
+  }
+
+  MortalityMatrix
 }
 
 #' Relabel by separate the Male and Female
