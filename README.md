@@ -5,7 +5,7 @@ information borrowing. It implements workflows based on three published
 methodological papers:
 
 - deletion-substitution-addition (DSA) population selection;
-- age-specific band selection (ASS/ASB) for single- and multi-population
+- age-specific band selection (ASB) for single- and multi-population
   mortality forecasting;
 - bivariate model-based ensemble (BMBE) forecasts with ACF- and CBD-type base
   learners.
@@ -39,8 +39,8 @@ needs compilation.
 The exported forecasting functions are:
 
 - `forecast_dsa()` fits the DSA population-selection workflow.
-- `forecast_ass_single()` fits single-population age-specific band forecasts.
-- `forecast_ass_multi()` fits multi-population age-specific band forecasts.
+- `forecast_asb_single()` fits single-population age-specific band forecasts.
+- `forecast_asb_multi()` fits multi-population age-specific band forecasts.
 - `forecast_bmbe_acf()` fits a BMBE workflow using ACF-type base learners.
 - `forecast_bmbe_cbd()` fits a BMBE workflow using CBD-type base learners.
 
@@ -111,13 +111,13 @@ dsa_forecast <- forecast_dsa(
   t = 10
 )
 
-single_ass <- forecast_ass_single(
+single_asb <- forecast_asb_single(
   prepared,
   Series = "female",
   t = 10
 )
 
-multi_ass <- forecast_ass_multi(
+multi_asb <- forecast_asb_multi(
   prepared,
   Series = "male",
   t = 10
@@ -147,7 +147,7 @@ The defaults reproduce the empirical setup in the source scripts and papers:
 - validation years: `1995:2002`
 - testing years: `2003:2010`
 - final training years: learning plus validation
-- ASS/DSA age range: `0:100`
+- ASB/DSA age range: `0:100`
 - CBD age range: `55:90`
 
 For a new mortality dataset, set the year windows explicitly and prefer
@@ -174,6 +174,6 @@ package.
 Method mapping:
 
 - `forecast_dsa()` follows the DSA algorithm paper.
-- `forecast_ass_single()` and `forecast_ass_multi()` follow the age-specific
+- `forecast_asb_single()` and `forecast_asb_multi()` follow the age-specific
   band selection paper.
 - `forecast_bmbe_acf()` and `forecast_bmbe_cbd()` follow the BMBE paper.

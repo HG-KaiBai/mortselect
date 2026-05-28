@@ -24,7 +24,7 @@ myfun1_CBD=function(Obj)
 #' @param Obj a data set
 #'
 #' @return a data set with 0 < age < 100
-myfun1_ASS=function(Obj)
+myfun1_ASB=function(Obj)
 {
   return(extract.ages(Obj,ages=c(0:100),combine.upper = FALSE))
 }

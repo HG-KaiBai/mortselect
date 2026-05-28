@@ -1,5 +1,5 @@
-export(forecast_ass_multi)
-export(forecast_ass_single)
+export(forecast_asb_multi)
+export(forecast_asb_single)
 export(forecast_bmbe_acf)
 export(forecast_bmbe_cbd)
 export(forecast_dsa)

@@ -46,7 +46,7 @@ filtering for required years. This is provided only for reproducing
 legacy studies that excluded populations by position.}
 
 \item{fix_zero}{Logical; if \code{TRUE}, repair zero, missing, and infinite
-mortality rates by interpolation through \code{\link[=fix_mortality]{fix_mortality()}}. Populations
+mortality rates by interpolation. Populations
 with an age row containing no positive finite rates are skipped and
 reported with a warning.}
 

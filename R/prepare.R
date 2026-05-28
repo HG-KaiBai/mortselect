@@ -67,7 +67,7 @@ validate_demogdata_list <- function(dataset, series = c("female", "male", "total
 #'   filtering for required years. This is provided only for reproducing
 #'   legacy studies that excluded populations by position.
 #' @param fix_zero Logical; if `TRUE`, repair zero, missing, and infinite
-#'   mortality rates by interpolation through [fix_mortality()]. Populations
+#'   mortality rates by interpolation. Populations
 #'   with an age row containing no positive finite rates are skipped and
 #'   reported with a warning.
 #' @param relabel_sex Logical; if `TRUE`, split each population into female

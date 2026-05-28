@@ -314,7 +314,7 @@ forecast_bmbe_acf = function(prepared,
 #' @return A named list of log-rate forecast matrices.
 #' @export
 #'
-forecast_ass_single = function(prepared,
+forecast_asb_single = function(prepared,
                                Series = 'female',
                                t = 15,
                                smoothing_window = 5,
@@ -377,7 +377,7 @@ forecast_ass_single = function(prepared,
     save(LogRate.Fcast.matrix, file = save_file)
   }
   LogRate.Fcast.matrix
-  #resave(Summary.Result,file="Single_ASS_Prediction.RData")
+  #resave(Summary.Result,file="Single_ASB_Prediction.RData")
 }
 
 
@@ -396,7 +396,7 @@ forecast_ass_single = function(prepared,
 #' @return A named list of log-rate forecast matrices.
 #' @export
 #'
-forecast_ass_multi = function(prepared,
+forecast_asb_multi = function(prepared,
                               Series = 'female',
                               t = 15,
                               smoothing_window = 9,
@@ -469,7 +469,7 @@ forecast_ass_multi = function(prepared,
     save(LogRate.Fcast.matrix, file = save_file)
   }
   LogRate.Fcast.matrix
-  #resave(Summary.Result.smooth,file="Multi_ASS_Prediction.RData")
+  #resave(Summary.Result.smooth,file="Multi_ASB_Prediction.RData")
 }
 
 
