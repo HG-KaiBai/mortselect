@@ -1,0 +1,56 @@
+Package: mortselect
+Type: Package
+Title: Mortality Forecasting with Data-Driven Selection and Ensemble Methods
+Version: 0.1.0
+Authors@R: c(
+    person(
+      "Yixing", "User",
+      email = "y679zhao@uwaterloo.ca",
+      role = c("aut", "cre")
+    ),
+    person(
+      "Liqun", "Diao",
+      role = "ctb"
+    ),
+    person(
+      "Yechao", "Meng",
+      role = "ctb"
+    ),
+    person(
+      "Chengguo", "Weng",
+      role = "ctb"
+    )
+  )
+Author: Yixing User [aut, cre],
+    Liqun Diao [ctb],
+    Yechao Meng [ctb],
+    Chengguo Weng [ctb]
+Maintainer: Yixing User <y679zhao@uwaterloo.ca>
+Description: Implements mortality forecasting workflows based on
+    deletion-substitution-addition population selection, age-specific band
+    selection, and bivariate model-based ensemble methods. The package works
+    with demography::demogdata mortality datasets and exposes parameterized
+    age and year windows so the methods can be applied beyond the empirical
+    Human Mortality Database settings used in the source papers.
+License: GPL (>= 3)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Imports:
+    caTools,
+    demography,
+    forecast,
+    ggplot2,
+    ggrepel,
+    gnm,
+    magrittr,
+    MASS,
+    reshape2,
+    StMoMo,
+    stats,
+    utils
+Suggests:
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3

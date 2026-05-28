@@ -1,0 +1,7 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^papers$
+^.*\.RData$
+^.*\.pdf$
+^.*\.tar\.gz$
+^.*\.Rcheck$
