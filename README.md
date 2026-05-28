@@ -1,18 +1,57 @@
 # mortselect
 
-`mortselect` packages mortality-forecasting workflows from the papers in
-`papers/`:
+`mortselect` is an R package for mortality forecasting with data-driven
+information borrowing. It implements workflows based on three published
+methodological papers:
 
-- DSA population selection for augmented common factor forecasts.
-- Age-specific band selection for single- and multi-population forecasts.
-- Bivariate model-based ensembles using ACF- and CBD-type base learners.
+- deletion-substitution-addition (DSA) population selection;
+- age-specific band selection (ASS/ASB) for single- and multi-population
+  mortality forecasting;
+- bivariate model-based ensemble (BMBE) forecasts with ACF- and CBD-type base
+  learners.
 
-The code expects mortality data as a list of `demography::demogdata` objects,
-such as objects read from the Human Mortality Database with the `demography`
-package. The public functions expose age and year windows as arguments, so the
-methods are not tied to the original 1970-2010 study period.
+The package works with mortality datasets represented as lists of
+`demography::demogdata` objects. The public functions expose age ranges, year
+windows, population exclusions, and forecast horizons, so the workflows can be
+used beyond the original Human Mortality Database study periods.
 
-## Data preparation
+## Installation
+
+Install the development version from GitHub:
+
+```r
+install.packages("remotes")
+remotes::install_github("HG-KaiBai/mortselect")
+```
+
+Alternatively, with `pak`:
+
+```r
+install.packages("pak")
+pak::pak("HG-KaiBai/mortselect")
+```
+
+On Windows, source-package installation may require Rtools if a dependency
+needs compilation.
+
+## Main Workflows
+
+The exported forecasting functions are:
+
+- `forecast_dsa()` fits the DSA population-selection workflow.
+- `forecast_ass_single()` fits single-population age-specific band forecasts.
+- `forecast_ass_multi()` fits multi-population age-specific band forecasts.
+- `forecast_bmbe_acf()` fits a BMBE workflow using ACF-type base learners.
+- `forecast_bmbe_cbd()` fits a BMBE workflow using CBD-type base learners.
+
+Supporting data helpers include:
+
+- `prepare_mortselect_data()`
+- `validate_demogdata_list()`
+- `create_population_age_dictionary()`
+- `bind_training_rates()`
+
+## Data Preparation
 
 ```r
 library(mortselect)
@@ -23,16 +62,16 @@ prepared <- prepare_mortselect_data(
   learning_years = 1980:2004,
   validation_years = 2005:2012,
   test_years = 2013:2020,
-  exclude_labels = c("Example region to omit")
+  exclude_labels = c("Example population to omit")
 )
 ```
 
-`prepare_mortselect_data()` validates that each population has the requested
-series, filters populations with sufficient year coverage, optionally removes
-named populations, repairs zero mortality rates, and returns prepared
-`learning`, `validation`, `test`, `training`, and `full` datasets.
+`prepare_mortselect_data()` validates the requested mortality series, filters
+populations with sufficient year coverage, applies optional exclusions, repairs
+zero mortality rates, and returns `learning`, `validation`, `test`, `training`,
+and `full` datasets.
 
-## Forecasting examples
+## Forecasting Examples
 
 ```r
 dsa_forecast <- forecast_dsa(
@@ -46,7 +85,7 @@ dsa_forecast <- forecast_dsa(
   test_years = 2013:2020
 )
 
-single_asb <- forecast_ass_single(
+single_ass <- forecast_ass_single(
   dataset,
   Series = "female",
   t = 10,
@@ -56,7 +95,7 @@ single_asb <- forecast_ass_single(
   test_years = 2013:2020
 )
 
-multi_asb <- forecast_ass_multi(
+multi_ass <- forecast_ass_multi(
   dataset,
   Series = "male",
   t = 10,
@@ -66,22 +105,60 @@ multi_asb <- forecast_ass_multi(
   test_years = 2013:2020
 )
 
-acf_ensemble <- forecast_bmbe_acf(dataset, Series = "female", t = 10)
-cbd_ensemble <- forecast_bmbe_cbd(dataset, Series = "female", t = 10, ages = 55:90)
+acf_ensemble <- forecast_bmbe_acf(
+  dataset,
+  Series = "female",
+  t = 10
+)
+
+cbd_ensemble <- forecast_bmbe_cbd(
+  dataset,
+  Series = "female",
+  t = 10,
+  ages = 55:90
+)
 ```
 
-Each top-level workflow returns its forecast object. To reproduce the older
-script behavior of writing an `.RData` file, pass `save_file = "result.RData"`.
+Each workflow returns its forecast object. To also write an `.RData` result,
+pass `save_file = "result.RData"`.
 
-## Notes
+## Default Study Windows
 
-The default year windows reproduce the empirical setup used in the source
-scripts and papers:
+The defaults reproduce the empirical setup in the source scripts and papers:
 
-- learning: 1970-1994
-- validation: 1995-2002
-- testing: 2003-2010
-- final training: learning plus validation
+- learning years: `1970:1994`
+- validation years: `1995:2002`
+- testing years: `2003:2010`
+- final training years: learning plus validation
+- ASS/DSA age range: `0:100`
+- CBD age range: `55:90`
 
-For a different mortality dataset, supply the windows explicitly and use
-`exclude_labels` rather than numeric exclusions whenever possible.
+For a new mortality dataset, set the year windows explicitly and prefer
+`exclude_labels` over numeric exclusions.
+
+## References
+
+Please cite the relevant methodological paper when using a workflow from this
+package.
+
+1. Diao, L., Meng, Y., & Weng, C. (2021). A DSA algorithm for mortality
+   forecasting. *North American Actuarial Journal, 25*(3), 438-458.
+   <https://doi.org/10.1080/10920277.2020.1806884>
+
+2. Meng, Y., Diao, L., & Weng, C. (2026). Mortality prediction via
+   age-specific band selection. *Scandinavian Actuarial Journal, 2026*(4),
+   443-467. <https://doi.org/10.1080/03461238.2025.2537925>
+
+3. Diao, L., Meng, Y., Weng, C., & Wirjanto, T. (2023). Enhancing mortality
+   forecasting through bivariate model-based ensemble. *North American
+   Actuarial Journal, 27*(4), 751-770.
+   <https://doi.org/10.1080/10920277.2023.2167832>
+
+Method mapping:
+
+- `forecast_dsa()` follows the DSA algorithm paper.
+- `forecast_ass_single()` and `forecast_ass_multi()` follow the age-specific
+  band selection paper.
+- `forecast_bmbe_acf()` and `forecast_bmbe_cbd()` follow the BMBE paper.
+
+
