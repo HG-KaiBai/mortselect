@@ -13,6 +13,10 @@
 #' @param LOSS Selection loss. One of `"SSE"`, `"MAE"`, `"MSPE"`, or `"MAPE"`.
 #' @param t Number of years to forecast.
 #' @param save_file Optional `.RData` path. If `NULL`, no file is written.
+#' @param parallel Logical; if `TRUE`, run independent target or model-pair
+#'   tasks in parallel.
+#' @param workers Optional number of parallel workers. Defaults to one fewer
+#'   than the number of physical CPU cores, capped at the number of tasks.
 #'
 #' @return A named list of forecasts. Each element contains `label` and
 #'   `Prediction`, where `Prediction` is a mortality-rate matrix.
@@ -23,7 +27,9 @@ forecast_dsa = function(prepared,
                         N = 5,
                         LOSS = "SSE",
                         t = 15,
-                        save_file = NULL)
+                        save_file = NULL,
+                        parallel = FALSE,
+                        workers = NULL)
 {
   validate_prepared_mortselect_data(
     prepared,
@@ -42,8 +48,7 @@ forecast_dsa = function(prepared,
   COG <- min(COG, length(Candidate_relabel))
   ########################################### model Fitting
   Labels = names(Dataset_Test_relabel)
-  Ans = list()
-  for (country in Labels){
+  Ans <- .mort_lapply(Labels, function(country) {
     message("Current predicting ", country)
     CV_example = DSA_V5(Dataset_Validate_relabel[[country]], Candidate_relabel, COG, N, LOSS)
     best_idx = which.min(CV_example$LOSS)
@@ -63,9 +68,10 @@ forecast_dsa = function(prepared,
     last_year <- max(Training_relabel[[country]]$year)
     colnames(Predict) = c((last_year + 1):(last_year + t))
     Rate_predict = exp(Predict)
-    Ans[[country]] = list(label = country, Group = Best_group, Prediction = Rate_predict)
+    list(label = country, Group = Best_group, Prediction = Rate_predict)
     #Ans[[country]] = list(label = country, Error = Err, Prediction = Rate_predict)
-  }
+  }, parallel = parallel, workers = workers)
+  names(Ans) <- Labels
   if (!is.null(save_file)) {
     save(Ans, file = save_file)
   }
@@ -90,7 +96,9 @@ forecast_dsa = function(prepared,
 forecast_bmbe_cbd = function(prepared,
                              Series = "female",
                              t = 15,
-                             save_file = NULL){
+                             save_file = NULL,
+                             parallel = FALSE,
+                             workers = NULL){
   validate_prepared_mortselect_data(prepared, series = Series, min_populations = 2)
   Training = prepared$full
   Candidate = prepared$learning
@@ -102,53 +110,45 @@ forecast_bmbe_cbd = function(prepared,
   }
 
   ### Fit all bivariate models and obtain optim Delta ####
-  BivarateCBD1withDelta_modeling=list() # record fitting results of all models
-  ValidateBivarateCBD1withDelta=list() # record extrapolation on validation set for all models
-  ValidationSSESummary=data.frame() # record validation SSE
-  OptimDelta=data.frame() # record deltat choice with smallest SSE_V
-
-  s=1
-  for(Index1 in 1:(length(Candidate)-1)){
-    for(Index2 in (Index1+1):length(Candidate)){
-      ## indication current chosen populations
-      message(names(Candidate)[c(Index1,Index2)])
+  PairIndex <- t(utils::combn(seq_along(Candidate), 2))
+  pair_modeling <- .mort_lapply(seq_len(nrow(PairIndex)), function(pair_row) {
+      Index1 <- PairIndex[pair_row, 1]
+      Index2 <- PairIndex[pair_row, 2]
+      message(names(Candidate)[c(Index1, Index2)])
       Test=data.frame()
+      models <- list()
+      validations <- list()
       for(Deltat in -10:10){
         F=FitBivariateCBD1withDelta_modeling(Index1,Index2,Series,Deltat, Candidate)
-        BivarateCBD1withDelta_modeling[[s]]=F
         E=ExtrapolateBivarateCBD1withDelta(F, h = validation_h)
-        ValidateBivarateCBD1withDelta[[s]]=E
         temp=ValidationSSE_CBD1withDelta(E,Series, Dataset_Validate)
-        ValidationSSESummary=rbind(ValidationSSESummary,temp)
+        models[[length(models) + 1]] <- F
+        validations[[length(validations) + 1]] <- E
         Test=rbind(Test,temp)
-        s=s+1
       }
       optim=Test[which(Test$SSE_V==min(Test$SSE_V)),]
-      OptimDelta=rbind(OptimDelta,optim)
-    }
-  }
+      list(models = models, validations = validations, validation = Test, optim = optim)
+  }, parallel = parallel, workers = workers)
+  BivarateCBD1withDelta_modeling <- unlist(lapply(pair_modeling, `[[`, "models"), recursive = FALSE)
+  ValidateBivarateCBD1withDelta <- unlist(lapply(pair_modeling, `[[`, "validations"), recursive = FALSE)
+  ValidationSSESummary <- do.call(rbind, lapply(pair_modeling, `[[`, "validation"))
+  OptimDelta <- do.call(rbind, lapply(pair_modeling, `[[`, "optim"))
   ####################################################
-  BivarateCBD1withDelta=list() # record fitting results of all models
-  PredictionBivarateCBD1withDelta=list() # record extrapolation on validation set for all models
-  RelevantScale=data.frame() # record relevantscale between K(t) and k_j(t) for all models
-
-  s=1
-  for(Index1 in 1:(length(Candidate)-1)){
-    for(Index2 in (Index1+1):length(Candidate)){
-      ## indication current chosen populations
-      message(names(Candidate)[c(Index1,Index2)])
+  final_pair_models <- .mort_lapply(seq_len(nrow(PairIndex)), function(pair_row) {
+      Index1 <- PairIndex[pair_row, 1]
+      Index2 <- PairIndex[pair_row, 2]
+      message(names(Candidate)[c(Index1, Index2)])
       Index=which(OptimDelta$label1== names(Candidate)[Index1] & OptimDelta$label2== names(Candidate)[Index2])
       DeltatChoice=OptimDelta$Deltat[Index]
       F=FitBivariateCBD1withDelta_modeling(Index1,Index2,Series,DeltatChoice, Training)
       message(DeltatChoice)
       temp_RS=ObtainRelevantScale(F)
-      RelevantScale=rbind(RelevantScale,temp_RS)
       E=ExtrapolateBivarateCBD1withDelta(F, h = t)
-      BivarateCBD1withDelta[[s]]=F
-      PredictionBivarateCBD1withDelta[[s]]=E
-      s=s+1
-    }
-  }
+      list(model = F, prediction = E, relevant_scale = temp_RS)
+  }, parallel = parallel, workers = workers)
+  BivarateCBD1withDelta <- lapply(final_pair_models, `[[`, "model")
+  PredictionBivarateCBD1withDelta <- lapply(final_pair_models, `[[`, "prediction")
+  RelevantScale <- do.call(rbind, lapply(final_pair_models, `[[`, "relevant_scale"))
   ####################################################
   # Rand_Avg
   ModelInfo=data.frame()
@@ -180,18 +180,15 @@ forecast_bmbe_cbd = function(prepared,
     names(ValidationSSE_Rank_byPopulation)[i]=target
   }
 
-  PredictionRule_RankAvgSSE=list()
-  for(i in 1:length(Candidate)){
-    PredictionRule_RankAvgSSE[[i]]=ChooseGroupSize(ValidationSSE_Rank_byPopulation[[i]],Series, Dataset_Validate,
-                                                   ModelInfo,ValidateBivarateCBD1withDelta)
-    names(PredictionRule_RankAvgSSE)[i]=names(ValidationSSE_Rank_byPopulation)[i]
-  }
+  PredictionRule_RankAvgSSE <- .mort_lapply(seq_along(Candidate), function(i) {
+    ChooseGroupSize(ValidationSSE_Rank_byPopulation[[i]],Series, Dataset_Validate,
+                    ModelInfo,ValidateBivarateCBD1withDelta)
+  }, parallel = parallel, workers = workers)
+  names(PredictionRule_RankAvgSSE)=names(ValidationSSE_Rank_byPopulation)
 
-  CBD=list()
-  for(i in 1:length(Candidate)){
-    temp = PerformanceMeasure_CBD_RankAvg_SSE(PredictionRule_RankAvgSSE[[i]],Series,Dataset_Test,PredictionBivarateCBD1withDelta)
-    CBD[[i]]= temp
-  }
+  CBD <- .mort_lapply(seq_along(Candidate), function(i) {
+    PerformanceMeasure_CBD_RankAvg_SSE(PredictionRule_RankAvgSSE[[i]],Series,Dataset_Test,PredictionBivarateCBD1withDelta)
+  }, parallel = parallel, workers = workers)
   if (!is.null(save_file)) {
     save(CBD, file = save_file)
   }
@@ -216,7 +213,9 @@ forecast_bmbe_cbd = function(prepared,
 forecast_bmbe_acf = function(prepared,
                              Series = 'female',
                              t = 15,
-                             save_file = NULL){
+                             save_file = NULL,
+                             parallel = FALSE,
+                             workers = NULL){
   validate_prepared_mortselect_data(prepared, series = Series, min_populations = 2)
   Training = prepared$full
   Candidate = prepared$learning
@@ -227,18 +226,15 @@ forecast_bmbe_acf = function(prepared,
     stop("At least two populations are required for the bivariate ACF ensemble.", call. = FALSE)
   }
 
-  Result_bivariateACF=data.frame()
-  for(i in 1:(length(Candidate)-1))
-  {
-    for(j in (i+1):length(Candidate))
-    {
+  PairIndex <- t(utils::combn(seq_along(Candidate), 2))
+  Result_bivariateACF <- do.call(rbind, .mort_lapply(seq_len(nrow(PairIndex)), function(pair_row) {
+      i <- PairIndex[pair_row, 1]
+      j <- PairIndex[pair_row, 2]
       message(names(Candidate)[i])
       message(names(Candidate)[j])
-      temp=JointModelACF(Candidate[[i]],Candidate[[j]],Series, Candidate, Dataset_Validate,
-                         h = validation_h)
-      Result_bivariateACF=rbind(Result_bivariateACF,temp)
-    }
-  }
+      JointModelACF(Candidate[[i]],Candidate[[j]],Series, Candidate, Dataset_Validate,
+                    h = validation_h)
+  }, parallel = parallel, workers = workers))
 
   ## Obtain Optim Delta choice based on sum of validation SSE ####
   Result_DeltaChoice_SumSSE_V=data.frame()
@@ -254,15 +250,12 @@ forecast_bmbe_acf = function(prepared,
     }
   }
 
-  LogRatePrediction=list()
-  for(i in 1:length(Result_DeltaChoice_SumSSE_V[,1])){
-    LogRatePrediction[[i]]=Predict(Result_DeltaChoice_SumSSE_V[i,],Series, Training, Dataset_Test, t)
-  }
+  LogRatePrediction <- .mort_lapply(seq_len(nrow(Result_DeltaChoice_SumSSE_V)), function(i) {
+    Predict(Result_DeltaChoice_SumSSE_V[i,],Series, Training, Dataset_Test, t)
+  }, parallel = parallel, workers = workers)
 
 
-  Validate_Forecast_Result=list()
-  s=1
-  for(i in 1:length(Result_DeltaChoice_SumSSE_V[,1])){
+  Validate_Forecast_Result <- .mort_lapply(seq_len(nrow(Result_DeltaChoice_SumSSE_V)), function(i) {
     target_label=Result_DeltaChoice_SumSSE_V[i,]$target
     reference_label=Result_DeltaChoice_SumSSE_V[i,]$reference
     message(target_label)
@@ -272,27 +265,22 @@ forecast_bmbe_acf = function(prepared,
     delta=Result_DeltaChoice_SumSSE_V[i,]$delta
     G=GroupdemogdataWithDrift(target,reference,target$year[1],target$year[length(target$year)],delta)
     message(G$year)
-    V=Validate_Forecast(target,G,Series, Dataset_Validate, h = validation_h)
-    Validate_Forecast_Result[[s]]=V
-    s=s+1
-  }
+    Validate_Forecast(target,G,Series, Dataset_Validate, h = validation_h)
+  }, parallel = parallel, workers = workers)
 
-  PredictionRule_RankAvg=list()
-  for(i in 1:length(Candidate)){
-    PredictionRule_RankAvg[[i]]=RankAndAvg(Candidate[[i]], Series,
-                                           Result_DeltaChoice_SumSSE_V,
-                                           Dataset_Validate,
-                                           Validate_Forecast_Result)
-    names(PredictionRule_RankAvg)[i]=names(Candidate)[i]
-  }
+  PredictionRule_RankAvg <- .mort_lapply(seq_along(Candidate), function(i) {
+    RankAndAvg(Candidate[[i]], Series,
+               Result_DeltaChoice_SumSSE_V,
+               Dataset_Validate,
+               Validate_Forecast_Result)
+  }, parallel = parallel, workers = workers)
+  names(PredictionRule_RankAvg)=names(Candidate)
 
-  ACF=list()
-  for(i in 1:length(Candidate)){
-    temp=PerformanceMeasure_RankAvg(Candidate[[i]],Series,
-                                    Dataset_Test,PredictionRule_RankAvg,
-                                    Result_DeltaChoice_SumSSE_V,LogRatePrediction)
-    ACF[[i]]=temp
-  }
+  ACF <- .mort_lapply(seq_along(Candidate), function(i) {
+    PerformanceMeasure_RankAvg(Candidate[[i]],Series,
+                               Dataset_Test,PredictionRule_RankAvg,
+                               Result_DeltaChoice_SumSSE_V,LogRatePrediction)
+  }, parallel = parallel, workers = workers)
   if (!is.null(save_file)) {
     save(ACF, file = save_file)
   }
@@ -318,7 +306,9 @@ forecast_asb_single = function(prepared,
                                Series = 'female',
                                t = 15,
                                smoothing_window = 5,
-                               save_file = NULL){
+                               save_file = NULL,
+                               parallel = FALSE,
+                               workers = NULL){
   validate_prepared_mortselect_data(prepared, series = Series, min_populations = 1)
   Training = prepared$full
   Candidate = prepared$learning
@@ -326,30 +316,27 @@ forecast_asb_single = function(prepared,
   Dataset_Test = prepared$test
   ages <- prepared$metadata$ages %||% Candidate[[1]]$age
 
-  ChosenK=data.frame()
-  for(i in seq_along(Candidate)){
-    TargetPopulation=names(Candidate)[i]
+  ChosenK <- do.call(rbind, .mort_lapply(names(Candidate), function(TargetPopulation) {
+    out <- data.frame()
     for(Age in ages){
       TargetAge=Age
       target=paste(TargetPopulation,TargetAge,sep="")
       message(message("the target is ",target))
       UpperLimit_temp=max(abs(TargetAge - range(ages)))
       temp=ChoseK_BCV(TargetPopulation,TargetAge,Series,UpperLimit=UpperLimit_temp, Dataset_training)
-      ChosenK=rbind(ChosenK,temp)
+      out=rbind(out,temp)
     }
-  }
+    out
+  }, parallel = parallel, workers = workers))
 
   Smooth.ChosenK=data.frame()
   for (Population in names(Candidate)){
-    ChosenK.temp=subset(ChosenK,TargetPopulation==Population)
+    ChosenK.temp=ChosenK[ChosenK$TargetPopulation == Population, , drop = FALSE]
     ChosenK.temp$smooth.K=Smoothing.mean(ChosenK.temp,smoothing_window)
     Smooth.ChosenK=rbind(Smooth.ChosenK,ChosenK.temp)
   }
 
-  Result_allTargetPopulation=list()
-  #testSSE_AgeBand=data.frame()
-  LogRate.Fcast.matrix=list()
-  for(i in seq_along(Candidate)){
+  LogRate.Fcast.matrix <- .mort_lapply(seq_along(Candidate), function(i) {
     TargetPopulation=names(Candidate)[i]
     message(TargetPopulation)
     matrix.temp=matrix(nrow=length(ages),ncol=t)
@@ -358,8 +345,6 @@ forecast_asb_single = function(prepared,
     for (TargetAge in ages){
       message(TargetAge)
       out=performance_test(TargetPopulation,TargetAge,Series,Dataset_Test, Training, Smooth.ChosenK, t)
-      Result_allTargetPopulation[[i]]=out
-      names(Result_allTargetPopulation)[i]=TargetPopulation
       #temp=data.frame(TargetPopulation=TargetPopulation,TargetAge=TargetAge,sse_lc=out$sse_lc,sse_AgeBand=out$sse_AgeBand,BandWidth=out$ChosenKvalue)
       #testSSE_AgeBand=rbind(testSSE_AgeBand,temp)
       matrix.temp[s,]=as.vector(out$logrates_fcast)
@@ -367,9 +352,9 @@ forecast_asb_single = function(prepared,
     }
     colnames(matrix.temp) = c((Training[[i]]$year[length(Training[[i]]$year)]+1):
                                 (Training[[i]]$year[length(Training[[i]]$year)]+t))
-    LogRate.Fcast.matrix[[i]]=matrix.temp
-    names(LogRate.Fcast.matrix)[i]=paste0(TargetPopulation,"_",Series)
-  }
+    matrix.temp
+  }, parallel = parallel, workers = workers)
+  names(LogRate.Fcast.matrix)=paste0(names(Candidate),"_",Series)
   # Summary.Result=as.data.frame(testSSE_AgeBand %>%
   #                                group_by(TargetPopulation) %>%
   #                                summarise(sse_lc = sum(sse_lc),sse_AgeBand=sum(sse_AgeBand)))
@@ -400,7 +385,9 @@ forecast_asb_multi = function(prepared,
                               Series = 'female',
                               t = 15,
                               smoothing_window = 9,
-                              save_file = NULL){
+                              save_file = NULL,
+                              parallel = FALSE,
+                              workers = NULL){
   validate_prepared_mortselect_data(prepared, series = Series, min_populations = 1)
   Training = prepared$full
   Candidate = prepared$learning
@@ -414,30 +401,26 @@ forecast_asb_multi = function(prepared,
   ## All Traning Data
   Training.rate=bind_training_rates(Dataset_training, series = Series, ages = ages)
 
-  ChosenK=data.frame()
-  for(i in seq_along(Candidate)){
-    TargetPopulation=names(Candidate)[i]
+  ChosenK <- do.call(rbind, .mort_lapply(names(Candidate), function(TargetPopulation) {
+    out <- data.frame()
     for(Age in ages){
       TargetAge=Age
       target=paste(TargetPopulation,TargetAge,sep="")
       message(message("the target is ",target))
       UpperLimit_temp=length(ages) * length(Candidate) - 1
       temp=ChoseK_BCV_multi(TargetPopulation,TargetAge,Series,UpperLimit=UpperLimit_temp, Training.rate)
-      ChosenK=rbind(ChosenK,temp)
+      out=rbind(out,temp)
     }
-  }
+    out
+  }, parallel = parallel, workers = workers))
   Smooth.ChosenK=data.frame()
   for (Population in names(Candidate)){
-    ChosenK.temp=subset(ChosenK,TargetPopulation==Population)
+    ChosenK.temp=ChosenK[ChosenK$TargetPopulation == Population, , drop = FALSE]
     ChosenK.temp$smooth.K=Smoothing.mean(ChosenK.temp,smoothing_window)
     Smooth.ChosenK=rbind(Smooth.ChosenK,ChosenK.temp)
   }
 
-  Result_allTargetPopulation=list()
-  #testSSE_AgeBand=data.frame()
-  LogRate.Fcast.matrix=list()
-  #Error.matrix=list()
-  for(i in seq_along(Candidate)){
+  LogRate.Fcast.matrix <- .mort_lapply(seq_along(Candidate), function(i) {
     TargetPopulation=names(Candidate)[i]
     message(TargetPopulation)
     matrix.temp=matrix(nrow=length(ages),ncol=t)
@@ -447,8 +430,6 @@ forecast_asb_multi = function(prepared,
     for (TargetAge in ages){
       message(TargetAge)
       out=performance_test_multi(TargetPopulation,TargetAge,Series,Training.rate,Dataset_Test,Training, Smooth.ChosenK,Dictionary, t)
-      Result_allTargetPopulation[[i]]=out
-      names(Result_allTargetPopulation)[i]=TargetPopulation
       #temp=data.frame(TargetPopulation=TargetPopulation,TargetAge=TargetAge,sse_lc=out$sse_lc,sse_AgeBand=out$sse_AgeBand,BandWidth=out$ChosenKvalue,DomesticK=out$DomesticK,ForeignK=out$ForeignK)
       #testSSE_AgeBand=rbind(testSSE_AgeBand,temp)
       matrix.temp[s,]=as.vector(out$logrates_fcast)
@@ -457,11 +438,9 @@ forecast_asb_multi = function(prepared,
     }
     colnames(matrix.temp) = c((Training[[i]]$year[length(Training[[i]]$year)]+1):
                                 (Training[[i]]$year[length(Training[[i]]$year)]+t))
-    LogRate.Fcast.matrix[[i]]=matrix.temp
-    #Error.matrix[[i]]=error.matrix.temp
-    names(LogRate.Fcast.matrix)[i]=paste0(TargetPopulation,"_",Series)
-    #names(LogRate.Fcast.matrix)[i]=names(Error.matrix)[i]=TargetPopulation
-  }
+    matrix.temp
+  }, parallel = parallel, workers = workers)
+  names(LogRate.Fcast.matrix)=paste0(names(Candidate),"_",Series)
   # Summary.Result.smooth=as.data.frame(testSSE_AgeBand %>%
   #                                       group_by(TargetPopulation) %>%
   #                                       summarise(sse_lc = sum(sse_lc),sse_AgeBand=sum(sse_AgeBand)))

@@ -4,7 +4,14 @@
 \alias{forecast_bmbe_acf}
 \title{Bivariate ACF model-based ensemble forecast}
 \usage{
-forecast_bmbe_acf(prepared, Series = "female", t = 15, save_file = NULL)
+forecast_bmbe_acf(
+  prepared,
+  Series = "female",
+  t = 15,
+  save_file = NULL,
+  parallel = FALSE,
+  workers = NULL
+)
 }
 \arguments{
 \item{prepared}{A prepared mortality dataset returned by
@@ -15,6 +22,12 @@ forecast_bmbe_acf(prepared, Series = "female", t = 15, save_file = NULL)
 \item{t}{Number of years to forecast.}
 
 \item{save_file}{Optional \code{.RData} path. If \code{NULL}, no file is written.}
+
+\item{parallel}{Logical; if \code{TRUE}, run independent target or model-pair
+tasks in parallel.}
+
+\item{workers}{Optional number of parallel workers. Defaults to one fewer
+than the number of physical CPU cores, capped at the number of tasks.}
 }
 \value{
 A named list of ACF ensemble forecast objects.

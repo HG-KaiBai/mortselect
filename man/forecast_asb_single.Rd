@@ -9,7 +9,9 @@ forecast_asb_single(
   Series = "female",
   t = 15,
   smoothing_window = 5,
-  save_file = NULL
+  save_file = NULL,
+  parallel = FALSE,
+  workers = NULL
 )
 }
 \arguments{
@@ -23,6 +25,12 @@ forecast_asb_single(
 \item{smoothing_window}{Window size for smoothing selected bandwidths.}
 
 \item{save_file}{Optional \code{.RData} path. If \code{NULL}, no file is written.}
+
+\item{parallel}{Logical; if \code{TRUE}, run independent target or model-pair
+tasks in parallel.}
+
+\item{workers}{Optional number of parallel workers. Defaults to one fewer
+than the number of physical CPU cores, capped at the number of tasks.}
 }
 \value{
 A named list of log-rate forecast matrices.

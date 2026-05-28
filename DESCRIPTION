@@ -45,6 +45,7 @@ Imports:
     gnm,
     magrittr,
     MASS,
+    parallel,
     reshape2,
     StMoMo,
     stats,

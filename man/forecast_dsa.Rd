@@ -4,7 +4,16 @@
 \alias{forecast_dsa}
 \title{Forecast with the deletion-substitution-addition algorithm}
 \usage{
-forecast_dsa(prepared, COG = 30, N = 5, LOSS = "SSE", t = 15, save_file = NULL)
+forecast_dsa(
+  prepared,
+  COG = 30,
+  N = 5,
+  LOSS = "SSE",
+  t = 15,
+  save_file = NULL,
+  parallel = FALSE,
+  workers = NULL
+)
 }
 \arguments{
 \item{prepared}{A prepared mortality dataset returned by
@@ -19,6 +28,12 @@ forecast_dsa(prepared, COG = 30, N = 5, LOSS = "SSE", t = 15, save_file = NULL)
 \item{t}{Number of years to forecast.}
 
 \item{save_file}{Optional \code{.RData} path. If \code{NULL}, no file is written.}
+
+\item{parallel}{Logical; if \code{TRUE}, run independent target or model-pair
+tasks in parallel.}
+
+\item{workers}{Optional number of parallel workers. Defaults to one fewer
+than the number of physical CPU cores, capped at the number of tasks.}
 }
 \value{
 A named list of forecasts. Each element contains \code{label} and

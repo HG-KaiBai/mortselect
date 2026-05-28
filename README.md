@@ -139,6 +139,32 @@ cbd_ensemble <- forecast_bmbe_cbd(
 Each workflow returns its forecast object. To also write an `.RData` result,
 pass `save_file = "result.RData"`.
 
+## Parallel Execution
+
+All forecasting workflows can run independent target populations or bivariate
+model pairs in parallel. Use `parallel = TRUE` and optionally set `workers`:
+
+```r
+multi_asb <- forecast_asb_multi(
+  prepared,
+  Series = "female",
+  t = 10,
+  parallel = TRUE,
+  workers = 4
+)
+
+cbd_ensemble <- forecast_bmbe_cbd(
+  prepared_cbd,
+  Series = "female",
+  t = 10,
+  parallel = TRUE,
+  workers = 4
+)
+```
+
+When `workers` is not supplied, the package uses one fewer than the number of
+physical CPU cores, capped at the number of independent tasks.
+
 ## Default Study Windows
 
 The defaults reproduce the empirical setup in the source scripts and papers:
