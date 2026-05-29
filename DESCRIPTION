@@ -4,7 +4,7 @@ Title: Mortality Forecasting with Data-Driven Selection and Ensemble Methods
 Version: 0.1.0
 Authors@R: c(
     person(
-      "Yixing", "User",
+      "Yixing", "Zhao",
       email = "y679zhao@uwaterloo.ca",
       role = c("aut", "cre")
     ),
