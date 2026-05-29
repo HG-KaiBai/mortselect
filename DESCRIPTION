@@ -10,22 +10,22 @@ Authors@R: c(
     ),
     person(
       "Liqun", "Diao",
-      role = "ctb"
+      role = c("aut", "cre")
     ),
     person(
       "Yechao", "Meng",
-      role = "ctb"
+      role = c("aut", "cre")
     ),
     person(
       "Chengguo", "Weng",
-      role = "ctb"
+      role = c("aut", "cre")
     )
   )
 Author: Yixing Zhao [aut, cre],
-    Liqun Diao [ctb],
-    Yechao Meng [ctb],
-    Chengguo Weng [ctb]
-Maintainer: Yixing User <y679zhao@uwaterloo.ca>
+    Liqun Diao [aut, cre],
+    Yechao Meng [aut, cre],
+    Chengguo Weng [aut, cre]
+Maintainer: Yixing Zhao <y679zhao@uwaterloo.ca>
 Description: Implements mortality forecasting workflows based on
     deletion-substitution-addition population selection, age-specific band
     selection, and bivariate model-based ensemble methods. The package works
