@@ -5,3 +5,6 @@
 ^.*\.pdf$
 ^.*\.tar\.gz$
 ^.*\.Rcheck$
+^docs$
+^shiny$
+^tools$

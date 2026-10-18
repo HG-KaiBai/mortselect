@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "rate_unit": "mortality rate",
+  "methods": [
+    {
+      "id": "DSA",
+      "label": "DSA",
+      "description": "Deletion-substitution-addition",
+      "family": "Population selection",
+      "paper_year": "2021",
+      "file": "DSA.json",
+      "source_file": "2025_DSA_Prediction.RData",
+      "source_md5": "e2a609d46eab94f2b63d669391bd6236",
+      "ages": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100],
+      "years": [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+      "populations": ["-- England & Wales Total Population", "-- France total population", "-- NZ total population", "-- Scotland", "Australia", "Austria", "Belarus", "Belgium", "Bulgaria", "Canada", "Czech Republic", "Denmark", "Finland", "Hungary", "Italy", "Japan", "Latvia", "Lithuania", "Netherlands", "Norway", "Poland", "Portugal", "Russia", "Slovakia", "Spain", "Sweden", "Switzerland", "Taiwan", "U.S.A.", "Ukraine"],
+      "sexes": ["female", "male"],
+      "series_count": 60
+    },
+    {
+      "id": "SingleASS",
+      "label": "Single-population ASB",
+      "description": "Age-specific band selection",
+      "family": "Single-population selection",
+      "paper_year": "2026",
+      "file": "SingleASS.json",
+      "source_file": "2025_Single_ASS_Prediction.RData",
+      "source_md5": "6c0abb9badf09ae0ed8edf25e19b038a",
+      "ages": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100],
+      "years": [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+      "populations": ["-- England & Wales Total Population", "-- France total population", "-- NZ total population", "-- Scotland", "Australia", "Austria", "Belgium", "Canada", "Czech Republic", "Denmark", "Finland", "Hungary", "Italy", "Japan", "Netherlands", "Norway", "Poland", "Portugal", "Slovakia", "Spain", "Sweden", "Switzerland", "Taiwan", "U.S.A."],
+      "sexes": ["female", "male"],
+      "series_count": 48
+    },
+    {
+      "id": "MultiASS",
+      "label": "Multi-population ASB",
+      "description": "Age-specific band selection",
+      "family": "Multi-population selection",
+      "paper_year": "2026",
+      "file": "MultiASS.json",
+      "source_file": "2025_Multi_ASS_Prediction.RData",
+      "source_md5": "f83364e2e5a292dca04cf1f1d5498610",
+      "ages": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100],
+      "years": [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+      "populations": ["-- England & Wales Total Population", "-- France total population", "-- NZ total population", "-- Scotland", "Australia", "Austria", "Belgium", "Canada", "Czech Republic", "Denmark", "Finland", "Hungary", "Italy", "Japan", "Netherlands", "Norway", "Poland", "Portugal", "Slovakia", "Spain", "Sweden", "Switzerland", "Taiwan", "U.S.A."],
+      "sexes": ["female", "male"],
+      "series_count": 48
+    },
+    {
+      "id": "ACF",
+      "label": "ACF ensemble",
+      "description": "Bivariate model-based ensemble",
+      "family": "ACF-type base learners",
+      "paper_year": "2023",
+      "file": "ACF.json",
+      "source_file": "2025_ACF_Prediction.RData",
+      "source_md5": "e3723747b04b942de92538c1ac5e9a42",
+      "ages": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100],
+      "years": [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+      "populations": ["-- England & Wales Total Population", "-- France total population", "-- NZ total population", "-- Scotland", "Australia", "Austria", "Belgium", "Canada", "Czech Republic", "Denmark", "Finland", "Hungary", "Italy", "Japan", "Netherlands", "Norway", "Poland", "Portugal", "Slovakia", "Spain", "Sweden", "Switzerland", "Taiwan", "U.S.A."],
+      "sexes": ["female", "male"],
+      "series_count": 48
+    },
+    {
+      "id": "CBD",
+      "label": "CBD ensemble",
+      "description": "Bivariate model-based ensemble",
+      "family": "CBD-type base learners",
+      "paper_year": "2023",
+      "file": "CBD.json",
+      "source_file": "2025_CBD_55-90_Prediction.RData",
+      "source_md5": "00a586801656d4d90d90d920700d11b4",
+      "ages": [55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90],
+      "years": [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+      "populations": ["-- England & Wales Total Population", "-- France total population", "-- NZ total population", "-- Scotland", "Australia", "Austria", "Belgium", "Canada", "Czech Republic", "Denmark", "Finland", "Hungary", "Italy", "Japan", "Netherlands", "Norway", "Poland", "Portugal", "Slovakia", "Spain", "Sweden", "Switzerland", "Taiwan", "U.S.A."],
+      "sexes": ["female", "male"],
+      "series_count": 48
+    }
+  ],
+  "population_count": 30
+}

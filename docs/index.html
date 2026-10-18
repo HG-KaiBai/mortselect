@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore mortality forecasts across populations, ages and five selection and ensemble methods. An interactive research companion to the mortselect R package.">
+  <meta name="theme-color" content="#173f3b">
+  <title>mortselect — Mortality Forecast Explorer</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" type="module"></script>
+</head>
+<body>
+<a class="skip" href="#explorer">Skip to explorer</a>
+<header class="site-header"><div class="header-inner">
+  <a class="brand" href="#" aria-label="mortselect home"><img src="favicon.svg" alt="" width="36" height="36"><span>mortselect<span class="brand-dot">.</span></span></a>
+  <nav aria-label="Main navigation"><a href="#explorer">Explorer</a><a href="#research">The research</a><a class="repo-link" href="https://github.com/HG-KaiBai/mortselect" target="_blank" rel="noopener">R package <span aria-hidden="true">↗</span></a></nav>
+</div></header>
+<main>
+  <section class="hero" aria-labelledby="hero-title">
+    <div><p class="eyebrow"><span class="tiny-line"></span> MORTALITY FORECASTING · RESEARCH COMPANION</p>
+      <h1 id="hero-title">A clearer view of<br><em>mortality forecasts.</em></h1>
+      <p class="hero-copy">Explore how population selection and information borrowing shape mortality forecasts. Follow the results across ages, populations, and methods.</p>
+    </div>
+    <div class="study-summary" aria-label="Dataset coverage"><div><strong>05</strong><span>forecasting methods</span></div><div><strong id="population-count">—</strong><span>countries &amp; populations</span></div><div class="summary-period"><strong>2011–2025</strong><span>saved forecast horizon</span></div></div>
+  </section>
+  <section id="explorer" class="explorer" aria-label="Interactive forecast explorer">
+    <aside class="controls" aria-label="Forecast controls">
+      <div class="controls-heading"><h2>Build your view</h2><button class="text-button" id="reset" type="button">Reset ↺</button></div>
+      <div class="field"><label for="method"><span class="step">01</span> Forecast method</label><select id="method" disabled><option>Loading methods…</option></select><p class="field-hint" id="method-hint"></p></div>
+      <div class="field"><label for="country-search"><span class="step">02</span> Population</label><input id="country-search" type="search" placeholder="Find a population…" autocomplete="off" aria-controls="country-options"><div id="country-options" class="country-options" aria-label="Available populations"></div><p class="field-hint" id="country-hint">Choose one or more populations.</p></div>
+      <fieldset class="field sex-field"><legend><span class="step">03</span> Sex</legend><div class="sex-options"><label><input id="female" type="checkbox" value="female" checked><span>Female</span></label><label><input id="male" type="checkbox" value="male" checked><span>Male</span></label></div></fieldset>
+      <div class="field" id="age-field"><div class="label-row"><label for="age"><span class="step">04</span> Age</label><output id="age-value" for="age">60</output></div><input id="age" type="range" min="0" max="100" value="60"><div class="range-ends"><span id="age-min">0 years</span><span id="age-max">100 years</span></div></div>
+      <div class="field" id="ages-field" hidden><label for="ages"><span class="step">04</span> Ages to compare</label><input id="ages" type="text" value="40, 60, 80" inputmode="numeric" aria-describedby="ages-hint"><p class="field-hint" id="ages-hint">Separate ages with commas, e.g. 40, 60, 80.</p></div>
+      <div class="field" id="year-field" hidden><div class="label-row"><label for="year"><span class="step">04</span> Forecast year</label><output id="year-value" for="year">2025</output></div><input id="year" type="range" min="2011" max="2025" value="2025"><div class="range-ends"><span>2011</span><span>2025</span></div></div>
+      <div class="coverage-note"><span aria-hidden="true">ⓘ</span><p id="coverage-note">Available ages and populations follow the selected method.</p></div>
+    </aside>
+    <div class="results">
+      <div class="view-tabs" role="group" aria-label="Explore by"><button type="button" data-mode="age" class="active" aria-pressed="true"><span>01</span> By age</button><button type="button" data-mode="population" aria-pressed="false"><span>02</span> By population</button><button type="button" data-mode="year" aria-pressed="false"><span>03</span> By year</button></div>
+      <div class="chart-card">
+        <div class="chart-heading"><div><p class="eyebrow" id="chart-kicker">FORECAST TRAJECTORIES</p><h2 id="chart-title">Mortality over time</h2><p id="chart-subtitle">Loading the saved forecasts…</p></div><div class="chart-actions"><label class="scale-control"><input type="checkbox" id="log-scale"> Log scale</label><button type="button" class="icon-button" id="save-chart" title="Download chart as SVG" aria-label="Download chart as SVG">↓ SVG</button></div></div>
+        <div class="chart-container" id="chart-container"><div id="status" class="status" role="status" aria-live="polite">Loading forecast data…</div><svg id="chart" viewBox="0 0 900 440" role="img" aria-labelledby="svg-title svg-desc" tabindex="0" hidden></svg><div id="tooltip" class="tooltip" hidden></div></div>
+        <div id="legend" class="legend" aria-label="Chart legend"></div>
+        <div class="chart-foot"><span>Mortality rate × 100 · <span id="point-count">—</span> values</span><span>Hover or focus the chart and use ← →</span></div>
+      </div>
+      <div class="result-bottom"><div><span class="status-dot"></span> <span id="selection-summary">Saved research forecasts</span></div><div class="download-actions"><button type="button" id="show-table" class="secondary-button" aria-expanded="false" aria-controls="table-panel">View data</button><button type="button" id="share" class="secondary-button">Copy view link ↗</button><button type="button" id="download" class="primary-button">Download CSV ↓</button></div></div>
+      <p class="notice" id="notice" role="status" aria-live="polite"></p>
+      <div id="table-panel" class="table-panel" hidden><div class="table-title"><h3>Values in this view</h3><p>Unscaled mortality rates are included in the CSV.</p></div><div class="table-scroll" tabindex="0" role="region" aria-label="Forecast values"><table><thead><tr><th scope="col">Population</th><th scope="col">Sex</th><th scope="col">Age</th><th scope="col">Year</th><th scope="col">Rate × 100</th></tr></thead><tbody id="table-body"></tbody></table></div></div>
+    </div>
+  </section>
+  <section class="reading-note"><span class="note-marker">A note on the data</span><p>These are saved point forecasts from the supplied research results, covering 2011–2025. They are not observed mortality rates or newly fitted projections. CBD results cover ages 55–90; the other methods cover ages 0–100. Population coverage varies by method.</p></section>
+  <section id="research" class="research" aria-labelledby="research-title"><div class="section-heading"><div><p class="eyebrow">BEHIND THE FORECASTS</p><h2 id="research-title">Three papers. Five ways to borrow information.</h2></div><a href="https://github.com/HG-KaiBai/mortselect#installation" target="_blank" rel="noopener">Explore the R package ↗</a></div>
+    <div class="paper-grid">
+      <article><span class="paper-number">01 / POPULATION SELECTION</span><h3>A DSA algorithm for mortality forecasting</h3><p>Diao, Meng &amp; Weng · 2021<br><i>North American Actuarial Journal</i></p><div><span class="tag">DSA</span><a href="https://doi.org/10.1080/10920277.2020.1806884" target="_blank" rel="noopener">Read paper ↗</a></div></article>
+      <article><span class="paper-number">02 / AGE-SPECIFIC SELECTION</span><h3>Mortality prediction via age-specific band selection</h3><p>Meng, Diao &amp; Weng · 2026<br><i>Scandinavian Actuarial Journal</i></p><div><span class="tag">Single &amp; multi ASB</span><a href="https://doi.org/10.1080/03461238.2025.2537925" target="_blank" rel="noopener">Read paper ↗</a></div></article>
+      <article><span class="paper-number">03 / ENSEMBLE FORECASTING</span><h3>Enhancing mortality forecasting through bivariate model-based ensemble</h3><p>Diao, Meng, Weng &amp; Wirjanto · 2023<br><i>North American Actuarial Journal</i></p><div><span class="tag">ACF &amp; CBD</span><a href="https://doi.org/10.1080/10920277.2023.2167832" target="_blank" rel="noopener">Read paper ↗</a></div></article>
+    </div>
+  </section>
+</main>
+<footer><a class="brand" href="#">mortselect<span class="brand-dot">.</span></a><p>Mortality forecasting with data-driven selection and ensemble methods.</p><a href="https://github.com/HG-KaiBai/mortselect" target="_blank" rel="noopener">Source &amp; documentation ↗</a></footer>
+<noscript><p class="noscript">Enable JavaScript to explore the forecasts. The R package and research links remain available.</p></noscript>
+</body></html>

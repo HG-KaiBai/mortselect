@@ -1,5 +1,40 @@
 # mortselect
 
+[![Forecast explorer](https://img.shields.io/badge/Explore-mortality_forecasts-247466?style=flat-square)](https://hg-kaibai.github.io/mortselect/)
+[![Release downloads](https://img.shields.io/github/downloads/HG-KaiBai/mortselect/total?style=flat-square&label=release%20downloads)](https://github.com/HG-KaiBai/mortselect/releases)
+[![Page views](https://hits.dwyl.com/HG-KaiBai/mortselect.svg?style=flat-square)](https://hits.dwyl.com/HG-KaiBai/mortselect)
+[![GitHub stars](https://img.shields.io/github/stars/HG-KaiBai/mortselect?style=flat-square)](https://github.com/HG-KaiBai/mortselect/stargazers)
+[![Last commit](https://img.shields.io/github/last-commit/HG-KaiBai/mortselect?style=flat-square)](https://github.com/HG-KaiBai/mortselect/commits/master)
+[![License: GPL v3+](https://img.shields.io/badge/license-GPL_%E2%89%A5_3-blue?style=flat-square)](https://www.gnu.org/licenses/gpl-3.0.html)
+
+## Interactive Forecast Explorer
+
+**[Open the Mortality Forecast Explorer →](https://hg-kaibai.github.io/mortselect/)**
+
+Explore the saved paper results by age, population, or year. The explorer has
+interactive charts, method-specific filters, a log scale, shareable views,
+and CSV/SVG downloads. It runs entirely in the browser on GitHub Pages, so it
+does not require an active R server or a running local computer.
+
+The supplied results cover **2011–2025**. CBD forecasts cover ages **55–90**;
+the other methods cover **0–100**. These are saved point forecasts, not observed
+mortality rates or newly fitted projections. All displayed values are labelled
+as **mortality rate × 100**; CSV downloads also include the unscaled rates.
+
+To run the redesigned native Shiny version from a clone of this repository:
+
+```r
+install.packages(c("shiny", "ggplot2", "jsonlite"))
+shiny::runApp("shiny")
+```
+
+See [the website documentation](docs/README.md) for data export and local preview
+instructions. The release-download badge counts GitHub release assets, not
+R package installs. The page-view badge counts requests to the README badge,
+not unique visitors or GitHub's private traffic analytics.
+
+## About the Package
+
 `mortselect` is an R package for mortality forecasting with data-driven
 information borrowing. It implements workflows based on three published
 methodological papers:
